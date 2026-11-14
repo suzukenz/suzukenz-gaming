@@ -1,0 +1,104 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getVisibleGuides } from '../lib/content';
+import { site } from '../site';
+
+const games = (await getCollection('games')).sort((a, b) =>
+  a.data.title.localeCompare(b.data.title, 'ja'),
+);
+const guides = await getVisibleGuides();
+---
+
+<BaseLayout>
+  <div class="container game-index">
+    <p class="site-description">{site.description}</p>
+    <ul class="game-list" aria-label="ゲーム一覧">
+      {games.map((game) => (
+        <li>
+          <a
+            class="game-link"
+            href={`/games/${game.id}/`}
+            aria-labelledby={`game-${game.id}-title`}
+          >
+            <article class="game-card">
+              <header>
+                <h2 id={`game-${game.id}-title`}>{game.data.title}</h2>
+                <span class="guide-count">
+                  {
+                    guides.filter((guide) => guide.data.game.id === game.id)
+                      .length
+                  }{' '}
+                  記事
+                </span>
+              </header>
+              <span class="read-guide" aria-hidden="true">
+                攻略ノートを読む ↗
+              </span>
+            </article>
+          </a>
+        </li>
+      ))}
+    </ul>
+    {games.length === 0 && <p class="muted">ゲームを準備中です。</p>}
+  </div>
+</BaseLayout>
+
+<style>
+  .game-index {
+    padding-block: 2rem;
+  }
+  .site-description {
+    margin-block-end: 2rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .game-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 1.25rem;
+    padding: 0;
+    list-style: none;
+  }
+  .game-link {
+    display: block;
+    block-size: 100%;
+    border-radius: 0.5rem;
+    text-decoration: none;
+  }
+  .game-card {
+    box-sizing: border-box;
+    block-size: 100%;
+    padding: clamp(1.25rem, 1rem + 1vw, 2rem);
+    border: 1px solid var(--line);
+    border-radius: inherit;
+    background: var(--surface);
+  }
+  .game-link:hover .game-card {
+    border-color: var(--accent);
+  }
+  .game-card header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-end: 1.5rem;
+  }
+  .guide-count {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+  }
+  .read-guide {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.2rem;
+    background: var(--highlight);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+</style>

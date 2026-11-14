@@ -1,0 +1,62 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import GuideCard from '../../../components/GuideCard.astro';
+import { getVisibleGuides, type Game } from '../../../lib/content';
+
+export async function getStaticPaths() {
+  return (await getCollection('games')).map((game) => ({
+    params: { game: game.id },
+    props: { game },
+  }));
+}
+
+interface Props {
+  game: Game;
+}
+const { game } = Astro.props;
+const guides = (await getVisibleGuides()).filter(
+  (guide) => guide.data.game.id === game.id,
+);
+---
+
+<BaseLayout title={game.data.title}>
+  <div class="container">
+    <nav class="breadcrumb" aria-label="パンくず">
+      <ol>
+        <li>
+          <a href="/">トップ</a>
+        </li>
+        <li aria-current="page">{game.data.title}</li>
+      </ol>
+    </nav>
+    <header class="game-header">
+      <p class="eyebrow">GAME NOTES</p>
+      <h1>{game.data.title}</h1>
+    </header>
+    <section aria-labelledby="guides-title">
+      <div class="section-heading">
+        <h2 id="guides-title">攻略ノート</h2>
+        <span>{guides.length} 記事 · 更新順</span>
+      </div>
+      <ul class="guide-list">
+        {guides.map((guide) => (
+          <li>
+            <GuideCard guide={guide} />
+          </li>
+        ))}
+      </ul>
+      {guides.length === 0 && <p class="muted">攻略ノートを準備中です。</p>}
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .game-header {
+    padding-block: 1.5rem 3.5rem;
+  }
+  h1 {
+    margin-block: 1rem;
+    font-size: clamp(1.8rem, 1rem + 2.5vw, 3rem);
+  }
+</style>

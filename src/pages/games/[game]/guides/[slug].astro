@@ -1,0 +1,176 @@
+---
+import { getEntry, render } from 'astro:content';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
+import {
+  formatDate,
+  getVisibleGuides,
+  type Guide,
+} from '../../../../lib/content';
+
+export async function getStaticPaths() {
+  return (await getVisibleGuides()).map((guide) => ({
+    params: { game: guide.data.game.id, slug: guide.data.slug },
+    props: { guide },
+  }));
+}
+
+interface Props {
+  guide: Guide;
+}
+const { guide } = Astro.props;
+const game = await getEntry(guide.data.game);
+if (!game) throw new Error(`ゲームが見つかりません: ${guide.data.game.id}`);
+const { Content, headings } = await render(guide);
+const contents = headings.filter(({ depth }) => depth === 2 || depth === 3);
+---
+
+<BaseLayout
+  title={guide.data.title}
+  description={guide.data.description}
+  type="article"
+  publishedAt={guide.data.publishedAt}
+  updatedAt={guide.data.updatedAt}
+  noindex={guide.data.draft}
+>
+  <div class="container">
+    <nav class="breadcrumb" aria-label="パンくず">
+      <ol>
+        <li>
+          <a href="/">トップ</a>
+        </li>
+        <li>
+          <a href={`/games/${game.id}/`}>{game.data.title}</a>
+        </li>
+        <li aria-current="page">攻略ノート</li>
+      </ol>
+    </nav>
+    <article class="guide">
+      <header class="guide-header">
+        {guide.data.draft && (
+          <p class="draft-label">下書き · 開発サーバーでのみ表示</p>
+        )}
+        <a class="eyebrow game-link" href={`/games/${game.id}/`}>
+          {game.data.title}
+        </a>
+        <h1>{guide.data.title}</h1>
+        <p class="description">{guide.data.description}</p>
+        <dl class="guide-meta">
+          <div>
+            <dt>公開</dt>
+            <dd>
+              <time datetime={guide.data.publishedAt.toISOString()}>
+                {formatDate(guide.data.publishedAt)}
+              </time>
+            </dd>
+          </div>
+          {guide.data.updatedAt && (
+            <div>
+              <dt>更新</dt>
+              <dd>
+                <time datetime={guide.data.updatedAt.toISOString()}>
+                  {formatDate(guide.data.updatedAt)}
+                </time>
+              </dd>
+            </div>
+          )}
+          {guide.data.gameVersion && (
+            <div>
+              <dt>確認バージョン</dt>
+              <dd>{guide.data.gameVersion}</dd>
+            </div>
+          )}
+        </dl>
+      </header>
+      {contents.length > 0 && (
+        <nav class="contents" aria-labelledby="contents-title">
+          <h2 id="contents-title">この記事の目次</h2>
+          <ul>
+            {contents.map((heading) => (
+              <li data-depth={heading.depth}>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+      <div class="prose">
+        <Content />
+      </div>
+      <footer class="guide-footer">
+        <a href={`/games/${game.id}/`}>← {game.data.title}の記事一覧へ</a>
+      </footer>
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .guide {
+    max-inline-size: 46rem;
+    margin-inline: auto;
+  }
+  .guide-header {
+    margin-block: 3rem 2.5rem;
+  }
+  .game-link {
+    text-decoration: none;
+    letter-spacing: 0.03em;
+  }
+  h1 {
+    margin-block: 1rem;
+    font-size: clamp(1.65rem, 1.2rem + 1.8vw, 2.6rem);
+    line-height: 1.6;
+  }
+  .description {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .guide-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-block-start: 1.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .guide-meta div {
+    display: flex;
+    gap: 0.5rem;
+  }
+  dd {
+    margin: 0;
+  }
+  .contents {
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    background: var(--surface);
+  }
+  .contents h2 {
+    margin-block-end: 0.75rem;
+    font-size: 0.85rem;
+  }
+  .contents ul {
+    padding-inline-start: 1.25rem;
+    color: var(--accent);
+    font-size: 0.875rem;
+  }
+  .contents li + li {
+    margin-block-start: 0.4rem;
+  }
+  .contents li[data-depth='3'] {
+    margin-inline-start: 1rem;
+  }
+  .contents a {
+    text-decoration: none;
+  }
+  .contents a:hover {
+    text-decoration: underline;
+  }
+  .guide-footer {
+    margin-block-start: 4rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px solid var(--line);
+    color: var(--accent);
+    font-size: 0.875rem;
+  }
+</style>
