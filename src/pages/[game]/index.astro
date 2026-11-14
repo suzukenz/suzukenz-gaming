@@ -1,0 +1,64 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { gamePageTitle, type Game } from '../../lib/content';
+
+export async function getStaticPaths() {
+  return (await getCollection('games')).map((game) => ({
+    params: { game: game.id },
+    props: { game },
+  }));
+}
+
+interface Props {
+  game: Game;
+}
+const { game } = Astro.props;
+const title = gamePageTitle(game);
+const { Content } = await render(game);
+---
+
+<BaseLayout title={title}>
+  <div class="container">
+    <nav class="breadcrumb" aria-label="パンくず">
+      <ol>
+        <li>
+          <a href="/">トップ</a>
+        </li>
+        <li aria-current="page">{title}</li>
+      </ol>
+    </nav>
+    <header class="game-header">
+      <h1>{title}</h1>
+    </header>
+    <div>
+      {game.body?.trim() ? (
+        <nav class="prose game-outline" aria-label="攻略メモの目次">
+          <Content />
+        </nav>
+      ) : (
+        <p class="muted">攻略メモを準備中です。</p>
+      )}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .game-header {
+    margin-block-end: 2rem;
+  }
+  h1 {
+    font-size: clamp(1.8rem, 1rem + 2.5vw, 3rem);
+  }
+  .game-outline :global(h2) {
+    margin-block-start: 2.75rem;
+    font-size: 1.2rem;
+  }
+  .game-outline :global(h2:first-child) {
+    margin-block-start: 0;
+  }
+  .game-outline :global(li > :where(ul, ol)) {
+    margin-block: 0.75rem 0.25rem;
+    border-inline-start: 1px solid var(--line);
+  }
+</style>

@@ -6,9 +6,9 @@ const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
 const games = defineCollection({
   loader: glob({
-    pattern: '*.json',
+    pattern: '*.md',
     base: './src/content/games',
-    generateId: ({ entry }) => slug.parse(entry.replace(/\.json$/, '')),
+    generateId: ({ entry }) => slug.parse(entry.replace(/\.md$/, '')),
   }),
   schema: z.object({
     title: z.string().min(1),
@@ -29,7 +29,6 @@ const guides = defineCollection({
       slug,
       publishedAt: z.coerce.date(),
       updatedAt: z.coerce.date().optional(),
-      draft: z.boolean().default(true),
       gameVersion: z.string().min(1).optional(),
     })
     .refine(

@@ -33,7 +33,8 @@
     font-family: var(--font-sans);
     font-size-adjust: from-font;
     color: var(--ink);
-    background: #f5f5f5;
+    background: var(--page-background);
+    --page-background: #f5f5f5;
     --ink: #2b2b2b;
     --muted: #686868;
     --line: #dedede;
@@ -60,6 +61,7 @@
 
   main {
     flex: 1;
+    padding-block: 2rem;
   }
 
   :where(h1, h2, h3, p, ul, ol, dl, figure, blockquote) {
@@ -116,36 +118,8 @@
     color: var(--muted);
   }
 
-  .section-heading {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-    margin-block-end: 1.5rem;
-  }
-
-  .section-heading h2 {
-    font-size: 1.25rem;
-  }
-
-  .section-heading span {
-    color: var(--muted);
-    font-size: 0.8rem;
-  }
-
-  .guide-list {
-    padding: 0;
-    list-style: none;
-    border-block-start: 1px solid var(--line);
-  }
-
-  .guide-list > li {
-    border-block-end: 1px solid var(--line);
-  }
-
   .breadcrumb {
-    margin-block: 2rem;
+    margin-block-end: 1.5rem;
     color: var(--muted);
     font-size: 0.8rem;
   }
@@ -163,14 +137,6 @@
     content: '/';
     margin-inline-start: 0.5rem;
     color: var(--muted);
-  }
-
-  .draft-label {
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    border: 1px dashed currentColor;
-    color: var(--accent);
-    font-size: 0.75rem;
   }
 
   .prose {

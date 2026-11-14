@@ -4,7 +4,6 @@ description: 記事の内容を短く説明します。
 game: sample-quest
 slug: new-guide
 publishedAt: 2026-11-14
-draft: true
 # updatedAt: 2026-11-14
 # gameVersion: '1.0.0'
 ---

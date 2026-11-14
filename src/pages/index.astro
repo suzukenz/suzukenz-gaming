@@ -1,29 +1,32 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getVisibleGuides } from '../lib/content';
+import { getGuides } from '../lib/content';
 import { site } from '../site';
 
 const games = (await getCollection('games')).sort((a, b) =>
   a.data.title.localeCompare(b.data.title, 'ja'),
 );
-const guides = await getVisibleGuides();
+const guides = await getGuides();
 ---
 
 <BaseLayout>
-  <div class="container game-index">
+  <div class="container">
     <p class="site-description">{site.description}</p>
-    <ul class="game-list" aria-label="ゲーム一覧">
+    <h2 class="games-heading" id="games-title">
+      ゲーム攻略メモ(タイトル別)
+    </h2>
+    <ul class="game-list" aria-labelledby="games-title">
       {games.map((game) => (
         <li>
           <a
             class="game-link"
-            href={`/games/${game.id}/`}
+            href={`/${game.id}/`}
             aria-labelledby={`game-${game.id}-title`}
           >
             <article class="game-card">
               <header>
-                <h2 id={`game-${game.id}-title`}>{game.data.title}</h2>
+                <h3 id={`game-${game.id}-title`}>{game.data.title}</h3>
                 <span class="guide-count">
                   {
                     guides.filter((guide) => guide.data.game.id === game.id)
@@ -33,7 +36,7 @@ const guides = await getVisibleGuides();
                 </span>
               </header>
               <span class="read-guide" aria-hidden="true">
-                攻略ノートを読む ↗
+                攻略メモを読む ↗
               </span>
             </article>
           </a>
@@ -45,13 +48,14 @@ const guides = await getVisibleGuides();
 </BaseLayout>
 
 <style>
-  .game-index {
-    padding-block: 2rem;
-  }
   .site-description {
     margin-block-end: 2rem;
     color: var(--muted);
     font-size: 0.95rem;
+  }
+  .games-heading {
+    margin-block-end: 1.25rem;
+    font-size: 1.25rem;
   }
   .game-list {
     display: grid;
@@ -89,7 +93,7 @@ const guides = await getVisibleGuides();
     color: var(--muted);
     font-size: 0.75rem;
   }
-  h2 {
+  h3 {
     font-size: 1.5rem;
   }
   .read-guide {

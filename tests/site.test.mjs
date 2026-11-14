@@ -9,28 +9,32 @@ const dist = new URL('../dist/', import.meta.url);
 const envFile = new URL('../.env', import.meta.url);
 if (existsSync(envFile)) loadEnvFile(envFile);
 const gameDir = new URL('../src/content/games/', import.meta.url);
-const games = (await readdir(gameDir))
-  .filter((file) => file.endsWith('.json'))
-  .map((file) => file.replace(/\.json$/, ''));
+const games = await Promise.all(
+  (await readdir(gameDir))
+    .filter((file) => file.endsWith('.md'))
+    .map(async (file) => ({
+      id: file.replace(/\.md$/, ''),
+      ...(await readMarkdown(new URL(file, gameDir))),
+    })),
+);
 const guideDir = new URL('../src/content/guides/', import.meta.url);
 const guides = await Promise.all(
   (await readdir(guideDir, { recursive: true }))
     .filter((file) => file.endsWith('.md'))
-    .map(async (file) => {
-      const markdown = await readFile(new URL(file, guideDir), 'utf8');
-      const frontmatter = markdown.match(
-        /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/,
-      );
-      assert.ok(frontmatter, `${file}に記事データがありません`);
-      return {
-        ...parse(frontmatter[1]),
-        body: markdown.slice(frontmatter[0].length),
-      };
-    }),
+    .map((file) => readMarkdown(new URL(file, guideDir))),
 );
 
-const published = guides.filter((guide) => guide.draft === false);
-const route = (guide) => `/games/${guide.game}/guides/${guide.slug}/`;
+async function readMarkdown(file) {
+  const markdown = await readFile(file, 'utf8');
+  const frontmatter = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  assert.ok(frontmatter, `${file}に記事データがありません`);
+  return {
+    ...parse(frontmatter[1]),
+    body: markdown.slice(frontmatter[0].length),
+  };
+}
+
+const route = (guide) => `/${guide.game}/guides/${guide.slug}/`;
 const readOutput = (path) =>
   readFile(new URL(path.replace(/^\//, ''), dist), 'utf8');
 
@@ -45,47 +49,62 @@ function textContent(html) {
     .trim();
 }
 
-test('下書きは記事ページ・一覧・サイトマップを含む公開ファイルに出力しない', async () => {
-  const files = await readdir(dist, { recursive: true });
-  const outputs = await Promise.all(
-    files.filter((file) => /\.(html|xml)$/.test(file)).map(readOutput),
-  );
-  for (const guide of guides.filter((guide) => guide.draft !== false)) {
-    assert.ok(!existsSync(new URL(`${route(guide).slice(1)}index.html`, dist)));
-    for (const content of outputs) {
-      assert.ok(
-        !content.includes(route(guide)),
-        `下書き${route(guide)}が公開されています`,
-      );
-    }
-  }
-});
-
-test('トップのゲーム一覧からゲーム別の記事一覧を経由して攻略記事を読める', async () => {
+test('トップのゲーム一覧からゲーム別の目次を経由してすべての攻略記事を読める', async () => {
   const home = await readOutput('index.html');
-  for (const gameId of games) {
-    assert.ok(home.includes(`href="/games/${gameId}/"`));
-    const game = await readOutput(`games/${gameId}/index.html`);
-    for (const guide of published.filter((guide) => guide.game === gameId)) {
+  for (const { id: gameId, body } of games) {
+    assert.ok(home.includes(`href="/${gameId}/"`));
+    const game = await readOutput(`${gameId}/index.html`);
+    assert.deepEqual(
+      [...game.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)].map((match) =>
+        textContent(match[1]),
+      ),
+      [...body.matchAll(/^## (.+)$/gm)].map((match) => match[1]),
+      `${gameId}の目次の見出しと並び順が一致しません`,
+    );
+    for (const guide of guides.filter((guide) => guide.game === gameId)) {
       assert.ok(!home.includes(`href="${route(guide)}"`));
-      assert.ok(game.includes(`href="${route(guide)}"`));
+      assert.ok(
+        game.includes(`href="${route(guide)}"`),
+        `${route(guide)}が記事一覧にありません`,
+      );
       const article = await readOutput(`${route(guide)}index.html`);
-      assert.ok(article.includes(`href="/games/${gameId}/"`));
+      assert.ok(article.includes(`href="/${gameId}/"`));
       const heading = article.match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
       assert.ok(heading, `${route(guide)}に記事タイトルがありません`);
       assert.equal(textContent(heading[1]), guide.title);
-      if (/^## /m.test(guide.body))
-        assert.match(article, /id="contents-title"/);
-      assert.ok(
-        article.includes(
-          `datetime="${new Date(guide.publishedAt).toISOString()}"`,
+      const outline = article.match(/<aside\b[^>]*>[\s\S]*?<\/aside>/)?.[0];
+      const articleHeadings = [
+        ...article.matchAll(/<h[23]\b[^>]*id="([^"]+)"[^>]*>/g),
+      ].map((match) => match[1]);
+      if (articleHeadings.length > 0) {
+        assert.ok(outline, `${route(guide)}に追従ナビがありません`);
+        assert.match(outline, /aria-label="目次"/);
+        assert.deepEqual(
+          [...outline.matchAll(/href="#([^"]+)"/g)].map((match) =>
+            decodeURIComponent(match[1]),
+          ),
+          articleHeadings,
+          `${route(guide)}の追従ナビが記事の見出しと一致しません`,
+        );
+      } else {
+        assert.equal(outline, undefined);
+      }
+      const articleHeader = article.match(
+        /<article\b[^>]*>\s*<header\b[^>]*>([\s\S]*?)<\/header>/,
+      )?.[1];
+      assert.ok(articleHeader, `${route(guide)}に記事ヘッダーがありません`);
+      assert.match(articleHeader, /<dt\b[^>]*>最終更新<\/dt>/);
+      assert.deepEqual(
+        [...articleHeader.matchAll(/<time\b[^>]*datetime="([^"]+)"/g)].map(
+          (match) => match[1],
         ),
+        [new Date(guide.updatedAt ?? guide.publishedAt).toISOString()],
       );
     }
   }
 });
 
-test('見出しの階層が正しく、サイト内リンク・画像・目次の参照先が存在する', async () => {
+test('パンくず・見出しが正しく、サイト内リンク・画像・目次の参照先が存在する', async () => {
   const files = await readdir(dist, { recursive: true });
   const origin = 'https://local.example.test';
   for (const file of files.filter((file) => file.endsWith('.html'))) {
@@ -95,6 +114,17 @@ test('見出しの階層が正しく、サイト内リンク・画像・目次�
       1,
       `${file}のh1は一つにしてください`,
     );
+    const currentPage = html.match(
+      /<li[^>]*aria-current="page"[^>]*>([\s\S]*?)<\/li>/,
+    );
+    if (currentPage) {
+      const heading = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/);
+      assert.equal(
+        textContent(currentPage[1]),
+        textContent(heading[1]),
+        `${file}のパンくずとページタイトルが一致しません`,
+      );
+    }
     let previousLevel = 0;
     for (const [, depth] of html.matchAll(/<h([1-6])(?:\s|>)/g)) {
       const level = Number(depth);
@@ -139,8 +169,18 @@ test('公開URLの設定に応じてcanonical・サイトマップ・robotsを�
       robots.includes(`Sitemap: ${new URL('sitemap-index.xml', site)}`),
     );
     const sitemap = await readFile(new URL('sitemap-0.xml', dist), 'utf8');
-    for (const guide of published) {
-      assert.ok(sitemap.includes(new URL(route(guide), site).href));
+    for (const { id: gameId } of games) {
+      const url = new URL(`/${gameId}/`, site).href;
+      assert.ok(sitemap.includes(url));
+      const game = await readOutput(`${gameId}/index.html`);
+      assert.ok(game.includes(`<link rel="canonical" href="${url}">`));
+    }
+    for (const guide of guides) {
+      const url = new URL(route(guide), site).href;
+      assert.ok(sitemap.includes(url));
+      const article = await readOutput(`${route(guide)}index.html`);
+      assert.ok(article.includes(`<link rel="canonical" href="${url}">`));
+      assert.doesNotMatch(article, /content="noindex/);
     }
     assert.doesNotMatch(sitemap, /\/404(?:\/|\.html)/);
   } else {

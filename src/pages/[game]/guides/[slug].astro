@@ -1,0 +1,147 @@
+---
+import { getEntry, render } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import ArticleOutline from '../../../components/ArticleOutline.astro';
+import {
+  formatDate,
+  gamePageTitle,
+  getGuides,
+  type Guide,
+} from '../../../lib/content';
+
+export async function getStaticPaths() {
+  return (await getGuides()).map((guide) => ({
+    params: { game: guide.data.game.id, slug: guide.data.slug },
+    props: { guide },
+  }));
+}
+
+interface Props {
+  guide: Guide;
+}
+const { guide } = Astro.props;
+const game = await getEntry(guide.data.game);
+if (!game) throw new Error(`ゲームが見つかりません: ${guide.data.game.id}`);
+const { Content, headings } = await render(guide);
+const contents = headings.filter(({ depth }) => depth === 2 || depth === 3);
+const lastUpdated = guide.data.updatedAt ?? guide.data.publishedAt;
+---
+
+<BaseLayout
+  title={guide.data.title}
+  description={guide.data.description}
+  type="article"
+  publishedAt={guide.data.publishedAt}
+  updatedAt={guide.data.updatedAt}
+>
+  <div class="container">
+    <nav class="breadcrumb" aria-label="パンくず">
+      <ol>
+        <li>
+          <a href="/">トップ</a>
+        </li>
+        <li>
+          <a href={`/${game.id}/`}>{gamePageTitle(game)}</a>
+        </li>
+        <li aria-current="page">{guide.data.title}</li>
+      </ol>
+    </nav>
+    <div
+      class:list={['article-layout', { 'with-outline': contents.length > 0 }]}
+    >
+      {contents.length > 0 && <ArticleOutline headings={contents} />}
+      <article class="guide">
+        <header class="guide-header">
+          <a class="eyebrow game-link" href={`/${game.id}/`}>
+            {game.data.title}
+          </a>
+          <h1>{guide.data.title}</h1>
+          <p class="description">{guide.data.description}</p>
+          <dl class="guide-meta">
+            <div>
+              <dt>最終更新</dt>
+              <dd>
+                <time datetime={lastUpdated.toISOString()}>
+                  {formatDate(lastUpdated)}
+                </time>
+              </dd>
+            </div>
+          </dl>
+        </header>
+        <div class="prose">
+          <Content />
+        </div>
+        <footer class="guide-footer">
+          <a href={`/${game.id}/`}>← {gamePageTitle(game)}へ</a>
+        </footer>
+      </article>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .article-layout {
+    display: grid;
+    gap: 1.5rem;
+    --article-anchor-offset: 5rem;
+  }
+  .guide {
+    min-inline-size: 0;
+  }
+  .guide-header {
+    margin-block-end: 2rem;
+  }
+  .game-link {
+    display: inline-block;
+    margin-block-end: 0.75rem;
+    text-decoration: none;
+    letter-spacing: 0.03em;
+  }
+  h1 {
+    margin-block-end: 1rem;
+    font-size: clamp(1.65rem, 1.2rem + 1.8vw, 2.6rem);
+    line-height: 1.6;
+  }
+  .description {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .guide-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-block-start: 1.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  .guide-meta div {
+    display: flex;
+    gap: 0.5rem;
+  }
+  dd {
+    margin: 0;
+  }
+  .prose :global(:where(h2, h3)) {
+    scroll-margin-block-start: var(--article-anchor-offset);
+  }
+  .guide-footer {
+    margin-block-start: 4rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px solid var(--line);
+    color: var(--accent);
+    font-size: 0.875rem;
+  }
+  @media (width >= 64rem) {
+    .article-layout {
+      --article-anchor-offset: 1.5rem;
+    }
+    .article-layout.with-outline {
+      grid-template-columns: minmax(0, 1fr) 14rem;
+      column-gap: 3rem;
+    }
+    .guide {
+      grid-column: 1;
+      grid-row: 1;
+    }
+  }
+</style>

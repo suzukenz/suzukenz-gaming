@@ -1,0 +1,99 @@
+---
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+---
+
+<aside class="article-outline" data-article-outline>
+  <details open>
+    <summary>目次</summary>
+    <nav class="outline-nav" aria-label="目次" tabindex="0">
+      <p class="outline-title">目次</p>
+      <ul>
+        {headings.map((heading) => (
+          <li data-depth={heading.depth}>
+            <a href={`#${heading.slug}`}>{heading.text}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </details>
+</aside>
+
+<script>
+  import '../scripts/article-outline';
+</script>
+
+<style>
+  .article-outline {
+    position: sticky;
+    inset-block-start: 0;
+    align-self: start;
+    z-index: 1;
+    background: var(--page-background);
+    font-size: 0.8rem;
+  }
+  summary {
+    padding-block: 0.6rem;
+    border-block-end: 1px solid var(--line);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .outline-title {
+    display: none;
+    margin-block-end: 0.75rem;
+    font-weight: 600;
+  }
+  .outline-nav {
+    max-block-size: min(24rem, calc(100dvh - 6rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block: 0.75rem;
+  }
+  .outline-nav[data-scrollspy='native'] {
+    scroll-target-group: auto;
+  }
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  a {
+    display: block;
+    padding: 0.4rem 0.75rem;
+    border-inline-start: 2px solid var(--line);
+    color: var(--muted);
+    text-decoration: none;
+  }
+  [data-depth='3'] a {
+    padding-inline-start: 1.5rem;
+  }
+  a:hover {
+    color: var(--ink);
+  }
+  a:is(:target-current, .is-current) {
+    border-inline-start-color: var(--accent);
+    background: var(--highlight);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  @media (width >= 64rem) {
+    .article-outline {
+      grid-column: 2;
+      grid-row: 1;
+      inset-block-start: 2rem;
+    }
+    summary {
+      display: none;
+    }
+    .outline-title {
+      display: block;
+    }
+    .outline-nav {
+      max-block-size: calc(100dvh - 4rem);
+      padding-block: 0;
+    }
+  }
+</style>

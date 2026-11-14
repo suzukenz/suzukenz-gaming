@@ -5,7 +5,6 @@ game: sample-quest
 slug: first-adventure
 publishedAt: 2026-11-01
 updatedAt: 2026-11-14
-draft: false
 gameVersion: サンプル
 ---
 
