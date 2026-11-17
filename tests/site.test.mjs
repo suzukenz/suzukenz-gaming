@@ -104,6 +104,33 @@ test('トップのゲーム一覧からゲーム別の目次を経由してす�
   }
 });
 
+test('記事の表は見出しの対応を保ち、名前付きの領域でキーボード操作できる', async () => {
+  for (const guide of guides) {
+    const article = await readOutput(`${route(guide)}index.html`);
+    const tables = [...article.matchAll(/<table\b[\s\S]*?<\/table>/g)];
+    const regions = [
+      ...article.matchAll(
+        /<div\b([^>]*)>\s*(<table\b[\s\S]*?<\/table>)\s*<\/div>/g,
+      ),
+    ];
+    assert.equal(
+      regions.length,
+      tables.length,
+      `${route(guide)}の表にスクロール領域がありません`,
+    );
+    for (const [, attributes, table] of regions) {
+      assert.match(attributes, /role="region"/);
+      assert.match(attributes, /tabindex="0"/);
+      assert.match(attributes, /aria-label="[^"]+"/);
+      const head = table.match(/<thead\b[^>]*>([\s\S]*?)<\/thead>/)?.[1];
+      assert.ok(head, `${route(guide)}の表に列見出しがありません`);
+      for (const [, attributes] of head.matchAll(/<th\b([^>]*)>/g)) {
+        assert.match(attributes, /scope="col"/);
+      }
+    }
+  }
+});
+
 test('パンくず・見出しが正しく、サイト内リンク・画像・目次の参照先が存在する', async () => {
   const files = await readdir(dist, { recursive: true });
   const origin = 'https://local.example.test';

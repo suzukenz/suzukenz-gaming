@@ -41,6 +41,8 @@
     --accent: #4e627a;
     --surface: #ffffff;
     --highlight: #e9edf2;
+    --table-line: #d1d5db;
+    --table-stripe: #f8f9fa;
     --mono: 'SFMono-Regular', Consolas, monospace;
   }
 
@@ -178,6 +180,55 @@
 
   .prose :where(a) {
     color: var(--accent);
+  }
+
+  .prose :where(.table-scroll) {
+    max-inline-size: 100%;
+    margin-block: 1.5rem;
+    overflow-x: auto;
+    border: 1px solid var(--table-line);
+    border-radius: 0.5rem;
+    background: var(--surface);
+  }
+
+  .prose :where(table) {
+    inline-size: 100%;
+    min-inline-size: 40rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+    line-height: 1.7;
+  }
+
+  .prose :where(th, td) {
+    min-inline-size: 5rem;
+    padding: 0.75rem 0.875rem;
+    vertical-align: top;
+  }
+
+  .prose :where(tr > :not(:last-child)) {
+    border-inline-end: 1px solid var(--table-line);
+  }
+
+  .prose :where(thead tr > *, tbody tr:not(:last-child) > *) {
+    border-block-end: 1px solid var(--table-line);
+  }
+
+  .prose :where(th) {
+    background: var(--highlight);
+    font-weight: 600;
+  }
+
+  .prose :where(thead th) {
+    white-space: nowrap;
+  }
+
+  .prose :where(th:not([align])) {
+    text-align: start;
+  }
+
+  .prose :where(tbody tr:nth-child(even)) {
+    background: var(--table-stripe);
   }
 
   .prose :where(pre) {
