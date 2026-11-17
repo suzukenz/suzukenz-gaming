@@ -1,5 +1,5 @@
 ---
-title: おすすめの動物
+title: ファイアーエムブレム 万紫千紅｜おすすめの動物
 description: カイ編のおすすめ動物、捕獲素材と成長補正値。
 game: fefw
 slug: animals

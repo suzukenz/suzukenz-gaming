@@ -1,5 +1,5 @@
 ---
-title: 集めたい装備
+title: ファイアーエムブレム 万紫千紅｜集めたい装備
 description: 集めておきたい装備と主な入手場所。
 game: fefw
 slug: equipment

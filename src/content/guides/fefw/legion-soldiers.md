@@ -1,5 +1,5 @@
 ---
-title: おすすめの軍団兵
+title: ファイアーエムブレム 万紫千紅｜おすすめの軍団兵
 description: セオドラ編のおすすめ軍団兵と募集場所。
 game: fefw
 slug: legion-soldiers

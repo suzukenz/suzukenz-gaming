@@ -1,5 +1,5 @@
 ---
-title: 周回用まとめと必要な外伝
+title: ファイアーエムブレム 万紫千紅｜周回用まとめと必要な外伝
 description: 4主人公の周回で必要な外伝とスカウト分担。
 game: fefw
 slug: playthrough-plan

@@ -1,5 +1,5 @@
 ---
-title: レダ 1部 章別チェック表
+title: ファイアーエムブレム 万紫千紅｜レダ 1部 章別チェック表
 description: レダ 1部 章別チェック表。イベントと外伝の時期・期限を確認するチェック表。
 game: fefw
 slug: leda-events
