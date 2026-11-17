@@ -1,7 +1,7 @@
 ---
 title: 記事のタイトル
 description: 記事の内容を短く説明します。
-game: sample-quest
+game: my-game
 slug: new-guide
 publishedAt: 2026-11-14
 # updatedAt: 2026-11-14
