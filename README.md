@@ -97,6 +97,13 @@ Markdownの近くに画像を置き、相対パスで参照します。
 
 `public/`にはfaviconなど、加工せずそのまま配信するファイルを置きます。
 
+### 表を使う
+
+Markdownの表には、罫線・見出し行の背景・交互の行背景が自動で付きます。
+狭い画面では表だけを横スクロールでき、キーボードでは表の領域にフォーカスして左右キーで移動できます。
+スクロール領域の名前には、表のキャプション、なければ直前の見出しを使います。
+記事側では通常のMarkdown記法で表を書けば適用されます。
+
 ## フォント
 
 英数字にはInterのLatinサブセット（可変ウェイト100〜900）を使用します。
@@ -145,6 +152,29 @@ Git連携でWorkers Buildsを使う場合は、Node.jsを`.node-version`に合�
 
 記事の修正は再ビルド・再デプロイで反映されます。
 GitHub Actionsはpush・Pull Requestで検証のみを行います。
+
+### PRブランチのプレビュー
+
+`wrangler.jsonc` の `previews: {}` により、ブランチごとのWorker Previewを利用できます。
+静的アセット・互換性設定はトップレベルのままで、本番のデプロイ設定は変更しません。
+
+Cloudflareの対象Workerで **Settings > Build > Branch control > Enable Preview Builds** を有効にし、次の設定を使います。
+
+- Production branch：`main`
+- Build command：`pnpm verify`
+- Deploy command（本番）：`pnpm exec wrangler deploy`
+- Preview command：`pnpm exec wrangler preview`
+
+すでにPreview commandが実行されている場合は、画面設定の変更は不要です。
+PRブランチへpushするとプレビュー用ビルドが動き、成功後のURLはCloudflareのPreviewsまたはPRのチェック・コメントから確認できます。
+Preview URLは標準で公開されます。秘密情報を記事へ含めないでください。
+
+静的アセットの配信・保存は無料です。Workers Freeのビルド枠は月3,000分、Preview上限は1 Workerあたり100個です。
+有料プランへ変更した場合は月6,000ビルド分を超えると従量課金があるため、利用量を確認してください。
+
+- [Previewの設定](https://developers.cloudflare.com/workers/previews/configuration/)
+- [ビルドの料金・上限](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/)
+- [静的アセットの料金](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/)
 
 ## 構成
 
