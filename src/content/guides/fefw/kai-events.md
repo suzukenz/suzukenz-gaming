@@ -1,5 +1,5 @@
 ---
-title: ファイアーエムブレム 万紫千紅｜カイ 1部 章別チェック表
+title: カイ 1部 章別チェック表
 description: カイ 1部 章別チェック表。イベントと外伝の時期・期限を確認するチェック表。
 game: fefw
 slug: kai-events

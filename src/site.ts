@@ -1,4 +1,4 @@
 export const site = {
   title: 'suzukenz gaming',
-  description: 'ゲームの進め方や探索のヒントをまとめた個人の攻略サイトです。',
+  description: '個人的なゲーム攻略メモ集です。',
 };

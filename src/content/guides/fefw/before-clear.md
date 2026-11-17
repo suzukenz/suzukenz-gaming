@@ -1,5 +1,5 @@
 ---
-title: ファイアーエムブレム 万紫千紅｜部の移行と再攻略の注意事項
+title: 部の移行と再攻略の注意事項
 description: 初回の部クリア前と再攻略時の持ち越しに関する注意事項。
 game: fefw
 slug: before-clear
