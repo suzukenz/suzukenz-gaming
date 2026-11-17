@@ -1,5 +1,7 @@
 # suzukenz gaming
 
+[![Cloudflare build](https://img.shields.io/github/check-runs/suzukenz/suzukenz-gaming/main?nameFilter=Workers%20Builds%3A%20suzukenz-gaming&label=Cloudflare%20build&logo=cloudflare)](https://github.com/suzukenz/suzukenz-gaming/commits/main/)
+
 ゲーム攻略記事をMarkdownとGitで管理し、静的サイトとして公開するプロジェクトです。
 Astro + TypeScriptを使用し、Cloudflare Workers Static Assets向けの設定を用意しています。
 
