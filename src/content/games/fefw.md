@@ -19,4 +19,3 @@ title: ファイアーエムブレム 万紫千紅
   - [レダ](/fefw/guides/leda-events/)
 - [集めたい装備](/fefw/guides/equipment/)
 - [部クリア時の注意事項（1周目要注意）](/fefw/guides/before-clear/)
-- [周回用まとめと必要な外伝](/fefw/guides/playthrough-plan/)
