@@ -18,7 +18,14 @@ const title = gamePageTitle(game);
 const { Content } = await render(game);
 ---
 
-<BaseLayout title={title}>
+<BaseLayout
+  title={title}
+  description={`${game.data.title}の攻略メモ一覧です。攻略記事を項目別に探せます。`}
+  breadcrumbs={[
+    { name: 'トップ', path: '/' },
+    { name: title, path: `/${game.id}/` },
+  ]}
+>
   <div class="container">
     <nav class="breadcrumb" aria-label="パンくず">
       <ol>

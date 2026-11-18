@@ -6,6 +6,7 @@ import {
   formatDate,
   gamePageTitle,
   getGuides,
+  guideUrl,
   type Guide,
 } from '../../../lib/content';
 
@@ -29,10 +30,16 @@ const lastUpdated = guide.data.updatedAt ?? guide.data.publishedAt;
 
 <BaseLayout
   title={guide.data.title}
+  titleContext={game.data.title}
   description={guide.data.description}
   type="article"
   publishedAt={guide.data.publishedAt}
   updatedAt={guide.data.updatedAt}
+  breadcrumbs={[
+    { name: 'トップ', path: '/' },
+    { name: gamePageTitle(game), path: `/${game.id}/` },
+    { name: guide.data.title, path: guideUrl(guide) },
+  ]}
 >
   <div class="container">
     <nav class="breadcrumb" aria-label="パンくず">

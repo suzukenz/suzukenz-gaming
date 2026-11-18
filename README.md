@@ -116,17 +116,38 @@ Markdownの表には、罫線・見出し行の背景・交互の行背景が自
 
 サイト名と説明は`src/site.ts`で変更できます。
 `description`はTOPのゲーム一覧の上と、サイト共通のメタデータに使います。
-公開時には`.env.example`を`.env`へコピーし、実際の公開URLを設定してください。
+公開時には`.env.example`を`.env`へコピーし、本番の公開URLを設定してください。
 Cloudflareのビルド環境で`SITE_URL`を設定することもできます。
 
 ```dotenv
-SITE_URL=https://gaming.your-domain.com
+SITE_URL=https://game.suzukenz.dev
 ```
 
 `SITE_URL`はHTTPSのオリジンを指定します。サブパス・クエリ・フラグメントは付けません。
 設定するとcanonical・OGPのURL・サイトマップ・robots.txtがそのドメインを使用します。
-OGPはタイトル・説明などのテキスト情報を出力します。
-未設定時には架空のURLを出力せず、`noindex`とクロール拒否のrobots.txtを出力します。
+previewでも`SITE_URL`には本番URLを使い、preview自身をcanonicalにしないでください。
+記事のタイトルにはゲーム名も含め、ゲームの目次には固有の説明を出力します。
+OGPはタイトル・説明などのテキスト情報を出力します。構造化データはTOPに`WebSite`、
+ゲームの目次に`CollectionPage`、記事に`BlogPosting`、目次と記事に`BreadcrumbList`を出力します。
+記事の公開日・更新日はMarkdownの値を使い、存在しない著者情報や評価は追加しません。
+未設定時には架空のURLや構造化データを出力せず、HTMLに`noindex, follow`を付けます。
+robots.txtはクロールを許可します。`Disallow: /`を併用すると検索エンジンが`noindex`を読めなくなるためです。
+404は設定の有無にかかわらず`noindex`で、サイトマップと構造化データの対象外です。
+
+### 公開後の検索確認
+
+1. Google Search Consoleで`https://game.suzukenz.dev`の所有権を確認し、`https://game.suzukenz.dev/sitemap-index.xml`を送信します。
+2. URL検査でTOP・ゲームの目次・記事の取得結果、canonical、インデックス可否を確認し、必要に応じて再クロールを依頼します。
+3. リッチリザルトテストで記事・パンくずを確認します。`WebSite`のサイト名はGoogleのサイト名ガイドも参照してください。
+4. 登録済みのpreviewがあれば、そのURLの`noindex`を確認し再クロールを待ちます。急ぐ場合は対象previewのSearch Console削除ツールを検討します。
+
+コード変更だけで所有権確認やサイトマップ送信は完了しません。検索順位・インデックス登録・リッチリザルトの表示は保証されません。
+記事内容の正確さ・更新と、Search Consoleでの継続的な確認も必要です。
+
+- [Googleのnoindexの説明](https://developers.google.com/search/docs/crawling-indexing/block-indexing)
+- [記事の構造化データ](https://developers.google.com/search/docs/appearance/structured-data/article)
+- [パンくずの構造化データ](https://developers.google.com/search/docs/appearance/structured-data/breadcrumb)
+- [Googleのサイト名](https://developers.google.com/search/docs/appearance/site-names)
 
 ## Cloudflareに公開する
 
@@ -169,6 +190,36 @@ Cloudflareの対象Workerで **Settings > Build > Branch control > Enable Previe
 すでにPreview commandが実行されている場合は、画面設定の変更は不要です。
 PRブランチへpushするとプレビュー用ビルドが動き、成功後のURLはCloudflareのPreviewsまたはPRのチェック・コメントから確認できます。
 Preview URLは標準で公開されます。秘密情報を記事へ含めないでください。
+
+#### previewの検索除外
+
+この構成はCloudflare **Workers Static Assets + Worker Previews**です。Pagesではありません。
+Workersの`workers.dev` Preview URL（ブランチと個別deployment）には、Cloudflareが標準で
+`X-Robots-Tag: noindex`を付けます。独自ドメインのPreview URLには自動では付きません。
+Pagesにもpreview用の同様の標準ヘッダーがありますが、当サイトの根拠はWorkersの仕様です。
+
+`public/_headers`で`https://:worker.:account.workers.dev/*`に`X-Robots-Tag: noindex`を明示し、
+previewと標準のWorkersホスト名を検索対象から外します。
+本番の`game.suzukenz.dev`にはこのルールは適用しません。
+previewの独自ドメインを追加する場合は、そのホスト名に限定した`_headers`ルールを追加するか、Cloudflare Accessを設定してください。
+`noindex`は対応する検索エンジン向けの指示で、アクセス制限ではありません。
+
+配信後は、Cloudflareのチェックに出る実際のpreview URLを指定して確認します。
+
+```sh
+curl -sSI https://game.suzukenz.dev/
+curl -sSI https://<preview-name>-suzukenz-gaming.xkenji-suzuki.workers.dev/
+```
+
+本番の通常ページに`noindex`がなく、previewには`X-Robots-Tag: noindex`があることを確認します。
+記事・`robots.txt`・`sitemap-index.xml`も確認し、previewの`robots.txt`がクロールを妨げていないことを確認してください。
+同じ静的ファイルを配信するため、previewでもcanonicalとサイトマップ内のURLは本番を指します。
+CIは本番URLあり・未設定の両方で検証し、Workersのローカル配信でもホスト名別のヘッダーとHTTP 404を検証します。
+
+- [Workers Previews](https://developers.cloudflare.com/workers/previews/)
+- [Workers previewの独自ドメインと検索除外](https://developers.cloudflare.com/workers/previews/custom-domains/#protect-preview-content)
+- [Static Assetsのヘッダールール](https://developers.cloudflare.com/workers/static-assets/headers/)
+- [参考：Pages previewの標準ヘッダー](https://developers.cloudflare.com/pages/configuration/preview-deployments/#preview-indexing-by-search-engines)
 
 静的アセットの配信・保存は無料です。Workers Freeのビルド枠は月3,000分、Preview上限は1 Workerあたり100個です。
 有料プランへ変更した場合は月6,000ビルド分を超えると従量課金があるため、利用量を確認してください。

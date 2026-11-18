@@ -10,8 +10,11 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        site_url: ['https://game.suzukenz.dev', '']
     env:
-      SITE_URL: https://gaming.example.test
+      SITE_URL: ${{ matrix.site_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

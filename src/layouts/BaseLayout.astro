@@ -5,26 +5,72 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
+  titleContext?: string;
   description?: string;
   type?: 'website' | 'article';
   publishedAt?: Date;
   updatedAt?: Date;
   noindex?: boolean;
+  breadcrumbs?: { name: string; path: string }[];
 }
 
 const {
   title,
+  titleContext,
   description = site.description,
   type = 'website',
   publishedAt,
   updatedAt,
   noindex = false,
+  breadcrumbs = [],
 } = Astro.props;
-const pageTitle = title ? `${title} | ${site.title}` : site.title;
+const pageTitle = [title, titleContext, site.title].filter(Boolean).join(' | ');
 const canonical = Astro.site
   ? new URL(Astro.url.pathname, Astro.site)
   : undefined;
 const isHome = Astro.url.pathname === '/';
+const structuredData =
+  canonical && !noindex
+    ? {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': isHome
+              ? 'WebSite'
+              : type === 'article'
+                ? 'BlogPosting'
+                : 'CollectionPage',
+            name: isHome ? site.title : title,
+            ...(type === 'article' && {
+              headline: title,
+              datePublished: publishedAt?.toISOString(),
+              dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+              mainEntityOfPage: canonical.href,
+            }),
+            description,
+            url: canonical.href,
+            inLanguage: 'ja',
+          },
+          ...(breadcrumbs.length > 1
+            ? [
+                {
+                  '@type': 'BreadcrumbList',
+                  itemListElement: breadcrumbs.map(({ name, path }, index) => ({
+                    '@type': 'ListItem',
+                    position: index + 1,
+                    name,
+                    item: new URL(path, Astro.site).href,
+                  })),
+                },
+              ]
+            : []),
+        ],
+      }
+    : undefined;
+// Keep content containing </script> from ending the JSON-LD script element.
+const structuredDataJson = structuredData
+  ? JSON.stringify(structuredData).replace(/</g, '\\u003c')
+  : undefined;
 ---
 
 <!doctype html>
@@ -66,6 +112,9 @@ const isHome = Astro.url.pathname === '/';
       />
     )}
     <meta name="twitter:card" content="summary" />
+    {structuredDataJson && (
+      <script type="application/ld+json" set:html={structuredDataJson} />
+    )}
   </head>
   <body>
     <a class="skip-link" href="#main">
