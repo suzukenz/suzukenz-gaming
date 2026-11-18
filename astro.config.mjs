@@ -8,28 +8,40 @@ import markdownTables from './src/lib/markdown-tables.ts';
 const envFile = new URL('./.env', import.meta.url);
 if (existsSync(envFile)) loadEnvFile(envFile);
 
-const site = process.env.SITE_URL || undefined;
-if (site) {
-  const url = new URL(site);
-  if (
-    url.protocol !== 'https:' ||
-    url.pathname !== '/' ||
-    url.search ||
-    url.hash
-  ) {
-    throw new Error(
-      'SITE_URL は https://example.com の形式で指定してください。',
-    );
-  }
+// A missing build variable must not silently exclude the production site.
+const siteUrl = process.env.SITE_URL || 'https://game.suzukenz.dev';
+if (
+  process.env.SITE_NOINDEX &&
+  !['true', 'false'].includes(process.env.SITE_NOINDEX)
+) {
+  throw new Error('SITE_NOINDEX は true または false を指定してください。');
 }
 
 export default defineConfig({
-  site,
+  site: siteUrl,
   output: 'static',
   trailingSlash: 'always',
   build: { format: 'directory' },
   markdown: { processor: satteri({ hastPlugins: [markdownTables] }) },
-  integrations: site
-    ? [sitemap({ filter: (page) => !page.endsWith('/404/') })]
-    : [],
+  integrations: [
+    {
+      name: 'site-indexing',
+      hooks: {
+        'astro:config:setup'({ command, config, updateConfig }) {
+          const url = new URL(config.site);
+          if (url.protocol !== 'https:' || url.href !== `${url.origin}/`) {
+            throw new Error(
+              'SITE_URL または --site には https://example.com のようなHTTPSのオリジンを指定してください。',
+            );
+          }
+          const indexable =
+            command === 'build' && process.env.SITE_NOINDEX !== 'true';
+          updateConfig({
+            vite: { define: { __SITE_INDEXABLE__: indexable } },
+            integrations: indexable ? [sitemap()] : [],
+          });
+        },
+      },
+    },
+  ],
 });

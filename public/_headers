@@ -1,0 +1,5 @@
+# Cover Worker Previews and the default workers.dev hostname, while leaving
+# the production custom domain indexable. Custom preview domains need a rule
+# for their own hostname (or Cloudflare Access).
+https://:worker.:account.workers.dev/*
+  X-Robots-Tag: noindex

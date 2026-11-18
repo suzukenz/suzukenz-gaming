@@ -8,6 +8,8 @@ import { parse } from 'yaml';
 const dist = new URL('../dist/', import.meta.url);
 const envFile = new URL('../.env', import.meta.url);
 if (existsSync(envFile)) loadEnvFile(envFile);
+const siteUrl = process.env.SITE_URL || 'https://game.suzukenz.dev';
+const noindex = process.env.SITE_NOINDEX === 'true';
 const gameDir = new URL('../src/content/games/', import.meta.url);
 const games = await Promise.all(
   (await readdir(gameDir))
@@ -185,35 +187,145 @@ test('パンくず・見出しが正しく、サイト内リンク・画像・�
   }
 });
 
-test('公開URLの設定に応じてcanonical・サイトマップ・robotsを生成する', async () => {
+test('SEO: 設定なしでも本番のcanonical・サイトマップ・robotsを生成し、明示的なnoindexだけを除外する', async () => {
   const html = await readFile(new URL('index.html', dist), 'utf8');
   const robots = await readFile(new URL('robots.txt', dist), 'utf8');
-  if (process.env.SITE_URL) {
-    const site = new URL(process.env.SITE_URL);
+  if (!noindex) {
+    const site = new URL(siteUrl);
     assert.ok(html.includes(`<link rel="canonical" href="${site}">`));
     assert.doesNotMatch(html, /content="noindex/);
     assert.ok(
       robots.includes(`Sitemap: ${new URL('sitemap-index.xml', site)}`),
     );
     const sitemap = await readFile(new URL('sitemap-0.xml', dist), 'utf8');
+    const locations = new Set(
+      [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, url]) => url),
+    );
     for (const { id: gameId } of games) {
       const url = new URL(`/${gameId}/`, site).href;
-      assert.ok(sitemap.includes(url));
+      assert.ok(locations.has(url), url);
       const game = await readOutput(`${gameId}/index.html`);
       assert.ok(game.includes(`<link rel="canonical" href="${url}">`));
+      assert.doesNotMatch(game, /content="noindex/);
     }
     for (const guide of guides) {
       const url = new URL(route(guide), site).href;
-      assert.ok(sitemap.includes(url));
+      assert.ok(locations.has(url), url);
       const article = await readOutput(`${route(guide)}index.html`);
       assert.ok(article.includes(`<link rel="canonical" href="${url}">`));
       assert.doesNotMatch(article, /content="noindex/);
     }
-    assert.doesNotMatch(sitemap, /\/404(?:\/|\.html)/);
+    for (const errorPath of ['/404', '/404/', '/404.html']) {
+      assert.ok(!locations.has(new URL(errorPath, site).href), errorPath);
+    }
   } else {
     assert.doesNotMatch(html, /rel="canonical"/);
     assert.match(html, /content="noindex, follow"/);
-    assert.match(robots, /Disallow: \//);
+    assert.match(robots, /Allow: \//);
+    assert.doesNotMatch(robots, /Disallow:|Sitemap:/i);
     assert.ok(!existsSync(new URL('sitemap-index.xml', dist)));
   }
+});
+
+test('SEO: ページ固有のタイトル・説明・構造化データが本文と一致する', async () => {
+  const { site } = await import('../src/site.ts');
+  const pages = [
+    {
+      path: '/',
+      title: `ゲーム攻略メモ | ${site.title}`,
+      description: site.description,
+      type: 'WebSite',
+      name: site.title,
+    },
+    ...games.map((game) => ({
+      path: `/${game.id}/`,
+      title: `${game.title}攻略メモ | ${site.title}`,
+      description: `${game.title}の攻略メモ一覧です。攻略記事を項目別に探せます。`,
+      type: 'CollectionPage',
+      name: `${game.title}攻略メモ`,
+      breadcrumbs: ['トップ', `${game.title}攻略メモ`],
+    })),
+    ...guides.map((guide) => {
+      const game = games.find(({ id }) => id === guide.game);
+      return {
+        path: route(guide),
+        title: `${guide.title} | ${game.title} | ${site.title}`,
+        description: guide.description,
+        type: 'BlogPosting',
+        name: guide.title,
+        breadcrumbs: ['トップ', `${game.title}攻略メモ`, guide.title],
+        guide,
+      };
+    }),
+  ];
+  for (const page of pages) {
+    const html = await readOutput(`${page.path}index.html`);
+    assert.equal(
+      textContent(html.match(/<title>(.*?)<\/title>/s)[1]),
+      page.title,
+    );
+    assert.equal(
+      textContent(html.match(/<meta name="description" content="([^"]*)"/)[1]),
+      page.description,
+    );
+    const scripts = [
+      ...html.matchAll(
+        /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
+      ),
+    ];
+    if (noindex) {
+      assert.match(html, /content="noindex, follow"/);
+      assert.doesNotMatch(html, /rel="canonical"/);
+      assert.equal(scripts.length, 0);
+      continue;
+    }
+    assert.doesNotMatch(html, /content="noindex/);
+    assert.equal(scripts.length, 1);
+    const data = JSON.parse(scripts[0][1]);
+    assert.equal(data['@context'], 'https://schema.org');
+    const [entity, breadcrumb] = data['@graph'];
+    const url = new URL(page.path, siteUrl).href;
+    assert.equal(entity['@type'], page.type);
+    assert.equal(entity.name, page.name);
+    assert.equal(entity.description, page.description);
+    assert.equal(entity.url, url);
+    assert.equal(entity.inLanguage, 'ja');
+    assert.ok(html.includes(`<meta property="og:url" content="${url}">`));
+    if (page.guide) {
+      assert.equal(entity.headline, page.guide.title);
+      assert.equal(
+        entity.datePublished,
+        new Date(page.guide.publishedAt).toISOString(),
+      );
+      assert.equal(
+        entity.dateModified,
+        new Date(page.guide.updatedAt ?? page.guide.publishedAt).toISOString(),
+      );
+      assert.equal(entity.mainEntityOfPage, url);
+    }
+    if (page.breadcrumbs) {
+      assert.equal(breadcrumb['@type'], 'BreadcrumbList');
+      assert.deepEqual(
+        breadcrumb.itemListElement.map(({ name }) => name),
+        page.breadcrumbs,
+      );
+      assert.deepEqual(
+        breadcrumb.itemListElement.map(({ position }) => position),
+        page.breadcrumbs.map((_, index) => index + 1),
+      );
+      assert.equal(breadcrumb.itemListElement.at(-1).item, url);
+      for (const item of breadcrumb.itemListElement) {
+        const target = new URL(item.item);
+        assert.equal(target.origin, new URL(siteUrl).origin);
+        assert.ok(
+          existsSync(new URL(`${target.pathname.slice(1)}index.html`, dist)),
+        );
+      }
+    } else {
+      assert.equal(breadcrumb, undefined);
+    }
+  }
+  const notFound = await readOutput('404.html');
+  assert.match(notFound, /content="noindex, follow"/);
+  assert.doesNotMatch(notFound, /application\/ld\+json/);
 });

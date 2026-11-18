@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { gamePageTitle, type Game } from '../../lib/content';
 
@@ -16,18 +17,19 @@ interface Props {
 const { game } = Astro.props;
 const title = gamePageTitle(game);
 const { Content } = await render(game);
+const breadcrumbs = [
+  { name: 'トップ', path: '/' },
+  { name: title, path: `/${game.id}/` },
+];
 ---
 
-<BaseLayout title={title}>
+<BaseLayout
+  title={title}
+  description={`${game.data.title}の攻略メモ一覧です。攻略記事を項目別に探せます。`}
+  breadcrumbs={breadcrumbs}
+>
   <div class="container">
-    <nav class="breadcrumb" aria-label="パンくず">
-      <ol>
-        <li>
-          <a href="/">トップ</a>
-        </li>
-        <li aria-current="page">{title}</li>
-      </ol>
-    </nav>
+    <Breadcrumbs items={breadcrumbs} />
     <header class="game-header">
       <h1>{title}</h1>
     </header>

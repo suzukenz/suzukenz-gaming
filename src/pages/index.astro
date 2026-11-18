@@ -10,7 +10,7 @@ const games = (await getCollection('games')).sort((a, b) =>
 const guides = await getGuides();
 ---
 
-<BaseLayout>
+<BaseLayout title="ゲーム攻略メモ">
   <div class="container">
     <p class="site-description">{site.description}</p>
     <h2 class="games-heading" id="games-title">

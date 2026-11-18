@@ -1,11 +1,13 @@
 ---
 import { getEntry, render } from 'astro:content';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import ArticleOutline from '../../../components/ArticleOutline.astro';
 import {
   formatDate,
   gamePageTitle,
   getGuides,
+  guideUrl,
   type Guide,
 } from '../../../lib/content';
 
@@ -25,27 +27,24 @@ if (!game) throw new Error(`ゲームが見つかりません: ${guide.data.game
 const { Content, headings } = await render(guide);
 const contents = headings.filter(({ depth }) => depth === 2 || depth === 3);
 const lastUpdated = guide.data.updatedAt ?? guide.data.publishedAt;
+const breadcrumbs = [
+  { name: 'トップ', path: '/' },
+  { name: gamePageTitle(game), path: `/${game.id}/` },
+  { name: guide.data.title, path: guideUrl(guide) },
+];
 ---
 
 <BaseLayout
   title={guide.data.title}
+  titleContext={game.data.title}
   description={guide.data.description}
   type="article"
   publishedAt={guide.data.publishedAt}
   updatedAt={guide.data.updatedAt}
+  breadcrumbs={breadcrumbs}
 >
   <div class="container">
-    <nav class="breadcrumb" aria-label="パンくず">
-      <ol>
-        <li>
-          <a href="/">トップ</a>
-        </li>
-        <li>
-          <a href={`/${game.id}/`}>{gamePageTitle(game)}</a>
-        </li>
-        <li aria-current="page">{guide.data.title}</li>
-      </ol>
-    </nav>
+    <Breadcrumbs items={breadcrumbs} />
     <div
       class:list={['article-layout', { 'with-outline': contents.length > 0 }]}
     >
