@@ -8,6 +8,8 @@ import { parse } from 'yaml';
 const dist = new URL('../dist/', import.meta.url);
 const envFile = new URL('../.env', import.meta.url);
 if (existsSync(envFile)) loadEnvFile(envFile);
+const siteUrl = process.env.SITE_URL || 'https://game.suzukenz.dev';
+const noindex = process.env.SITE_NOINDEX === 'true';
 const gameDir = new URL('../src/content/games/', import.meta.url);
 const games = await Promise.all(
   (await readdir(gameDir))
@@ -185,11 +187,11 @@ test('パンくず・見出しが正しく、サイト内リンク・画像・�
   }
 });
 
-test('公開URLの設定に応じてcanonical・サイトマップ・robotsを生成する', async () => {
+test('設定なしでも本番のcanonical・サイトマップ・robotsを生成し、明示的なnoindexだけを除外する', async () => {
   const html = await readFile(new URL('index.html', dist), 'utf8');
   const robots = await readFile(new URL('robots.txt', dist), 'utf8');
-  if (process.env.SITE_URL) {
-    const site = new URL(process.env.SITE_URL);
+  if (!noindex) {
+    const site = new URL(siteUrl);
     assert.ok(html.includes(`<link rel="canonical" href="${site}">`));
     assert.doesNotMatch(html, /content="noindex/);
     assert.ok(
@@ -266,8 +268,9 @@ test('ページ固有のタイトル・説明・構造化データが本文と�
         /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g,
       ),
     ];
-    if (!process.env.SITE_URL) {
+    if (noindex) {
       assert.match(html, /content="noindex, follow"/);
+      assert.doesNotMatch(html, /rel="canonical"/);
       assert.equal(scripts.length, 0);
       continue;
     }
@@ -276,7 +279,7 @@ test('ページ固有のタイトル・説明・構造化データが本文と�
     const data = JSON.parse(scripts[0][1]);
     assert.equal(data['@context'], 'https://schema.org');
     const [entity, breadcrumb] = data['@graph'];
-    const url = new URL(page.path, process.env.SITE_URL).href;
+    const url = new URL(page.path, siteUrl).href;
     assert.equal(entity['@type'], page.type);
     assert.equal(entity.name, page.name);
     assert.equal(entity.description, page.description);
@@ -308,7 +311,7 @@ test('ページ固有のタイトル・説明・構造化データが本文と�
       assert.equal(breadcrumb.itemListElement.at(-1).item, url);
       for (const item of breadcrumb.itemListElement) {
         const target = new URL(item.item);
-        assert.equal(target.origin, new URL(process.env.SITE_URL).origin);
+        assert.equal(target.origin, new URL(siteUrl).origin);
         assert.ok(
           existsSync(new URL(`${target.pathname.slice(1)}index.html`, dist)),
         );

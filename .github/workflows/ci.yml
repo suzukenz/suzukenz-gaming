@@ -12,9 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        site_url: ['https://game.suzukenz.dev', '']
+        include:
+          - name: production-default
+            site_url: ''
+            site_noindex: 'false'
+          - name: url-override
+            site_url: https://gaming.example.test
+            site_noindex: 'false'
+          - name: explicit-noindex
+            site_url: ''
+            site_noindex: 'true'
+    name: verify (${{ matrix.name }})
     env:
       SITE_URL: ${{ matrix.site_url }}
+      SITE_NOINDEX: ${{ matrix.site_noindex }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

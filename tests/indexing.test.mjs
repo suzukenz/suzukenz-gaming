@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
 import test from 'node:test';
 import { createTestHarness } from 'wrangler';
+
+const envFile = new URL('../.env', import.meta.url);
+if (existsSync(envFile)) loadEnvFile(envFile);
+const siteUrl = process.env.SITE_URL || 'https://game.suzukenz.dev';
+const noindex = process.env.SITE_NOINDEX === 'true';
 
 test('Workers配信で本番に検索除外ヘッダーを付けず、workers.devは全パスでnoindexになる', async (t) => {
   const server = createTestHarness({
@@ -59,6 +66,29 @@ test('Workers配信で本番に検索除外ヘッダーを付けず、workers.de
         }
         if (method === 'GET' && path === '/robots.txt') {
           assert.doesNotMatch(await response.text(), /Disallow:/i, label);
+        } else if (method === 'GET' && path.endsWith('/')) {
+          const html = await response.text();
+          if (path === '/missing-page/' || noindex) {
+            assert.match(
+              html,
+              /<meta name="robots" content="noindex, follow"/,
+              label,
+            );
+            assert.doesNotMatch(html, /rel="canonical"/, label);
+          } else {
+            // A missing response header alone does not prove indexability.
+            assert.doesNotMatch(
+              html,
+              /<meta name="robots" content="(?:noindex|none)/i,
+              label,
+            );
+            assert.ok(
+              html.includes(
+                `<link rel="canonical" href="${new URL(path, siteUrl).href}">`,
+              ),
+              label,
+            );
+          }
         } else {
           await response.arrayBuffer();
         }

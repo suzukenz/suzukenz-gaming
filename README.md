@@ -116,8 +116,10 @@ Markdownの表には、罫線・見出し行の背景・交互の行背景が自
 
 サイト名と説明は`src/site.ts`で変更できます。
 `description`はTOPのゲーム一覧の上と、サイト共通のメタデータに使います。
-公開時には`.env.example`を`.env`へコピーし、本番の公開URLを設定してください。
-Cloudflareのビルド環境で`SITE_URL`を設定することもできます。
+本番URLの既定値は`https://game.suzukenz.dev`です。`SITE_URL`が未設定または空文字でも、
+通常の`pnpm build`はこのURLのcanonical・OGP・サイトマップを生成し、通常ページに`noindex`を付けません。
+Cloudflare側で環境変数を追加しなくても本番を検索対象にできます。
+URLを変更する場合だけ`.env.example`を`.env`へコピーするか、ビルド環境で`SITE_URL`を上書きします。
 
 ```dotenv
 SITE_URL=https://game.suzukenz.dev
@@ -130,7 +132,12 @@ previewでも`SITE_URL`には本番URLを使い、preview自身をcanonicalに�
 OGPはタイトル・説明などのテキスト情報を出力します。構造化データはTOPに`WebSite`、
 ゲームの目次に`CollectionPage`、記事に`BlogPosting`、目次と記事に`BreadcrumbList`を出力します。
 記事の公開日・更新日はMarkdownの値を使い、存在しない著者情報や評価は追加しません。
-未設定時には架空のURLや構造化データを出力せず、HTMLに`noindex, follow`を付けます。
+`pnpm dev`は`SITE_URL`にかかわらずHTMLに`noindex, follow`を付け、canonical・構造化データを出力しません。
+検索対象にしない静的ビルドを明示的に作る場合は`SITE_NOINDEX=true pnpm build`を使います。
+この場合は全ページに`noindex, follow`を付け、canonical・構造化データ・サイトマップを出力しません。
+`SITE_NOINDEX`は未設定・空文字・`false`で通常公開、`true`で検索除外です。それ以外の値はビルドエラーになります。
+`SITE_URL`を空にするだけでは検索除外になりません。`pnpm preview`と`pnpm cf:preview`はビルド結果をそのまま配信するため、
+ローカル配信でもHTMLから検索除外したい場合は`SITE_NOINDEX=true pnpm cf:preview`のように指定します。
 robots.txtはクロールを許可します。`Disallow: /`を併用すると検索エンジンが`noindex`を読めなくなるためです。
 404は設定の有無にかかわらず`noindex`で、サイトマップと構造化データの対象外です。
 
@@ -168,7 +175,7 @@ pnpm deploy
 
 Git連携でWorkers Buildsを使う場合は、Node.jsを`.node-version`に合わせ、次を設定します。
 
-- 環境変数：`SITE_URL`に実際の公開URL
+- 環境変数：通常は不要。公開URLを変える場合だけ`SITE_URL`を上書き。本番に`SITE_NOINDEX=true`を設定しないこと
 - ビルドコマンド：`pnpm verify`
 - デプロイコマンド：`pnpm exec wrangler deploy`
 
@@ -214,7 +221,8 @@ curl -sSI https://<preview-name>-suzukenz-gaming.xkenji-suzuki.workers.dev/
 本番の通常ページに`noindex`がなく、previewには`X-Robots-Tag: noindex`があることを確認します。
 記事・`robots.txt`・`sitemap-index.xml`も確認し、previewの`robots.txt`がクロールを妨げていないことを確認してください。
 同じ静的ファイルを配信するため、previewでもcanonicalとサイトマップ内のURLは本番を指します。
-CIは本番URLあり・未設定の両方で検証し、Workersのローカル配信でもホスト名別のヘッダーとHTTP 404を検証します。
+CIはURL未設定の本番既定値・URL上書き・明示的な検索除外の3設定で検証します。
+Workersのローカル配信ではホスト名別のヘッダーに加え、実際のHTMLのnoindex・canonicalとHTTP 404を検証します。
 
 - [Workers Previews](https://developers.cloudflare.com/workers/previews/)
 - [Workers previewの独自ドメインと検索除外](https://developers.cloudflare.com/workers/previews/custom-domains/#protect-preview-content)

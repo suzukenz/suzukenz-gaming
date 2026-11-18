@@ -25,48 +25,48 @@ const {
   breadcrumbs = [],
 } = Astro.props;
 const pageTitle = [title, titleContext, site.title].filter(Boolean).join(' | ');
-const canonical = Astro.site
-  ? new URL(Astro.url.pathname, Astro.site)
-  : undefined;
+const blockIndexing = noindex || import.meta.env.DEV || !Astro.site;
+const canonical = blockIndexing
+  ? undefined
+  : new URL(Astro.url.pathname, Astro.site);
 const isHome = Astro.url.pathname === '/';
-const structuredData =
-  canonical && !noindex
-    ? {
-        '@context': 'https://schema.org',
-        '@graph': [
-          {
-            '@type': isHome
-              ? 'WebSite'
-              : type === 'article'
-                ? 'BlogPosting'
-                : 'CollectionPage',
-            name: isHome ? site.title : title,
-            ...(type === 'article' && {
-              headline: title,
-              datePublished: publishedAt?.toISOString(),
-              dateModified: (updatedAt ?? publishedAt)?.toISOString(),
-              mainEntityOfPage: canonical.href,
-            }),
-            description,
-            url: canonical.href,
-            inLanguage: 'ja',
-          },
-          ...(breadcrumbs.length > 1
-            ? [
-                {
-                  '@type': 'BreadcrumbList',
-                  itemListElement: breadcrumbs.map(({ name, path }, index) => ({
-                    '@type': 'ListItem',
-                    position: index + 1,
-                    name,
-                    item: new URL(path, Astro.site).href,
-                  })),
-                },
-              ]
-            : []),
-        ],
-      }
-    : undefined;
+const structuredData = canonical
+  ? {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': isHome
+            ? 'WebSite'
+            : type === 'article'
+              ? 'BlogPosting'
+              : 'CollectionPage',
+          name: isHome ? site.title : title,
+          ...(type === 'article' && {
+            headline: title,
+            datePublished: publishedAt?.toISOString(),
+            dateModified: (updatedAt ?? publishedAt)?.toISOString(),
+            mainEntityOfPage: canonical.href,
+          }),
+          description,
+          url: canonical.href,
+          inLanguage: 'ja',
+        },
+        ...(breadcrumbs.length > 1
+          ? [
+              {
+                '@type': 'BreadcrumbList',
+                itemListElement: breadcrumbs.map(({ name, path }, index) => ({
+                  '@type': 'ListItem',
+                  position: index + 1,
+                  name,
+                  item: new URL(path, Astro.site).href,
+                })),
+              },
+            ]
+          : []),
+      ],
+    }
+  : undefined;
 // Keep content containing </script> from ending the JSON-LD script element.
 const structuredDataJson = structuredData
   ? JSON.stringify(structuredData).replace(/</g, '\\u003c')
@@ -90,9 +90,7 @@ const structuredDataJson = structuredData
       crossorigin="anonymous"
     />
     {canonical && <link rel="canonical" href={canonical} />}
-    {(noindex || !Astro.site) && (
-      <meta name="robots" content="noindex, follow" />
-    )}
+    {blockIndexing && <meta name="robots" content="noindex, follow" />}
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content={type} />
