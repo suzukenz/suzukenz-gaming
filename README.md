@@ -125,8 +125,9 @@ URLを変更する場合だけ`.env.example`を`.env`へコピーするか、ビ
 SITE_URL=https://game.suzukenz.dev
 ```
 
-`SITE_URL`はHTTPSのオリジンを指定します。サブパス・クエリ・フラグメントは付けません。
+`SITE_URL` と `--site` にはHTTPSのオリジンを指定します。サブパス・クエリ・フラグメント・認証情報を含むURLはビルドエラーになります。
 設定するとcanonical・OGPのURL・サイトマップ・robots.txtがそのドメインを使用します。
+`pnpm build --site https://example.com` を指定すると、そのビルドではCLIのURLが優先されます。`SITE_NOINDEX=true` は `--site` を指定した場合も有効です。
 previewでも`SITE_URL`には本番URLを使い、preview自身をcanonicalにしないでください。
 記事のタイトルにはゲーム名も含め、ゲームの目次には固有の説明を出力します。
 OGPはタイトル・説明などのテキスト情報を出力します。構造化データはTOPに`WebSite`、
@@ -221,8 +222,8 @@ curl -sSI https://<preview-name>-suzukenz-gaming.xkenji-suzuki.workers.dev/
 本番の通常ページに`noindex`がなく、previewには`X-Robots-Tag: noindex`があることを確認します。
 記事・`robots.txt`・`sitemap-index.xml`も確認し、previewの`robots.txt`がクロールを妨げていないことを確認してください。
 同じ静的ファイルを配信するため、previewでもcanonicalとサイトマップ内のURLは本番を指します。
-CIはURL未設定の本番既定値・URL上書き・明示的な検索除外の3設定で検証します。
-Workersのローカル配信ではホスト名別のヘッダーに加え、実際のHTMLのnoindex・canonicalとHTTP 404を検証します。
+CIは環境変数未設定で `pnpm verify` を実行し、URL上書きと明示的な検索除外は生成ファイルで検証します。
+Workersのローカル配信ではホスト名別のヘッダー、本番とpreviewのトップページのnoindex・canonical、存在しないURLの404応答を検証します。
 
 - [Workers Previews](https://developers.cloudflare.com/workers/previews/)
 - [Workers previewの独自ドメインと検索除外](https://developers.cloudflare.com/workers/previews/custom-domains/#protect-preview-content)

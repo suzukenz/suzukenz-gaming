@@ -10,22 +10,6 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - name: production-default
-            site_url: ''
-            site_noindex: 'false'
-          - name: url-override
-            site_url: https://gaming.example.test
-            site_noindex: 'false'
-          - name: explicit-noindex
-            site_url: ''
-            site_noindex: 'true'
-    name: verify (${{ matrix.name }})
-    env:
-      SITE_URL: ${{ matrix.site_url }}
-      SITE_NOINDEX: ${{ matrix.site_noindex }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -35,3 +19,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
+      - name: Verify indexing with SITE_URL overridden
+        env:
+          SITE_URL: https://gaming.example.test
+        run: |
+          pnpm build
+          node --test --test-name-pattern='^SEO:' tests/site.test.mjs
+      - name: Verify CLI URL precedence with NODE_ENV overridden
+        run: |
+          SITE_URL=https://gaming.example.test NODE_ENV=development pnpm build --site https://override.example.test
+          SITE_URL=https://override.example.test node --test --test-name-pattern='^SEO:' tests/site.test.mjs
+      - name: Verify explicit noindex with a CLI URL
+        env:
+          SITE_NOINDEX: 'true'
+        run: |
+          pnpm build --site https://override.example.test
+          node --test --test-name-pattern='^SEO:' tests/site.test.mjs
+      - name: Verify dev indexing with NODE_ENV overridden
+        run: NODE_ENV=production node --test tests/development.test.mjs
+      - name: Reject a site URL containing a subpath
+        run: |
+          if pnpm build --site https://override.example.test/games/ > "$RUNNER_TEMP/site-validation.log" 2>&1; then
+            echo 'Expected the build to reject --site with a subpath'
+            exit 1
+          fi
+          grep -F 'HTTPSのオリジンを指定してください' "$RUNNER_TEMP/site-validation.log"

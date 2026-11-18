@@ -187,7 +187,7 @@ test('パンくず・見出しが正しく、サイト内リンク・画像・�
   }
 });
 
-test('設定なしでも本番のcanonical・サイトマップ・robotsを生成し、明示的なnoindexだけを除外する', async () => {
+test('SEO: 設定なしでも本番のcanonical・サイトマップ・robotsを生成し、明示的なnoindexだけを除外する', async () => {
   const html = await readFile(new URL('index.html', dist), 'utf8');
   const robots = await readFile(new URL('robots.txt', dist), 'utf8');
   if (!noindex) {
@@ -198,31 +198,36 @@ test('設定なしでも本番のcanonical・サイトマップ・robotsを生�
       robots.includes(`Sitemap: ${new URL('sitemap-index.xml', site)}`),
     );
     const sitemap = await readFile(new URL('sitemap-0.xml', dist), 'utf8');
+    const locations = new Set(
+      [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, url]) => url),
+    );
     for (const { id: gameId } of games) {
       const url = new URL(`/${gameId}/`, site).href;
-      assert.ok(sitemap.includes(url));
+      assert.ok(locations.has(url), url);
       const game = await readOutput(`${gameId}/index.html`);
       assert.ok(game.includes(`<link rel="canonical" href="${url}">`));
       assert.doesNotMatch(game, /content="noindex/);
     }
     for (const guide of guides) {
       const url = new URL(route(guide), site).href;
-      assert.ok(sitemap.includes(url));
+      assert.ok(locations.has(url), url);
       const article = await readOutput(`${route(guide)}index.html`);
       assert.ok(article.includes(`<link rel="canonical" href="${url}">`));
       assert.doesNotMatch(article, /content="noindex/);
     }
-    assert.doesNotMatch(sitemap, /\/404(?:\/|\.html)/);
+    for (const errorPath of ['/404', '/404/', '/404.html']) {
+      assert.ok(!locations.has(new URL(errorPath, site).href), errorPath);
+    }
   } else {
     assert.doesNotMatch(html, /rel="canonical"/);
     assert.match(html, /content="noindex, follow"/);
     assert.match(robots, /Allow: \//);
-    assert.doesNotMatch(robots, /Disallow:/);
+    assert.doesNotMatch(robots, /Disallow:|Sitemap:/i);
     assert.ok(!existsSync(new URL('sitemap-index.xml', dist)));
   }
 });
 
-test('ページ固有のタイトル・説明・構造化データが本文と一致する', async () => {
+test('SEO: ページ固有のタイトル・説明・構造化データが本文と一致する', async () => {
   const { site } = await import('../src/site.ts');
   const pages = [
     {
